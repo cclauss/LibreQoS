@@ -4,6 +4,7 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 import statistics
+import time
 
 from influxdb_client import InfluxDBClient, Point
 from influxdb_client.client.write_api import SYNCHRONOUS
@@ -486,6 +487,10 @@ def refreshLatencyGraphs():
 		token=influxDBtoken,
 		org=influxDBOrg
 	)
+	
+	# Record current timestamp, use for all points added
+	timestamp = time.time_ns()
+	
 	write_api = client.write_api(write_options=SYNCHRONOUS)
 
 	chunkedsubscriberCircuits = list(chunk_list(subscriberCircuits, 200))
@@ -496,7 +501,7 @@ def refreshLatencyGraphs():
 		for circuit in chunk:
 			if circuit['stats']['sinceLastQuery']['tcpLatency'] != None:
 				tcpLatency = float(circuit['stats']['sinceLastQuery']['tcpLatency'])
-				p = Point('TCP Latency').tag("Circuit", circuit['circuitName']).tag("ParentNode", circuit['ParentNode']).tag("Type", "Circuit").field("TCP Latency", tcpLatency)
+				p = Point('TCP Latency').tag("Circuit", circuit['circuitName']).tag("ParentNode", circuit['ParentNode']).tag("Type", "Circuit").field("TCP Latency", tcpLatency).time(timestamp)
 				queriesToSend.append(p)
 		write_api.write(bucket=influxDBBucket, record=queriesToSend)
 		queriesToSendCount += len(queriesToSend)
@@ -505,7 +510,7 @@ def refreshLatencyGraphs():
 	for parentNode in parentNodes:
 		if parentNode['stats']['sinceLastQuery']['tcpLatency'] != None:
 			tcpLatency = float(parentNode['stats']['sinceLastQuery']['tcpLatency'])
-			p = Point('TCP Latency').tag("Device", parentNode['parentNodeName']).tag("ParentNode", parentNode['parentNodeName']).tag("Type", "Parent Node").field("TCP Latency", tcpLatency)
+			p = Point('TCP Latency').tag("Device", parentNode['parentNodeName']).tag("ParentNode", parentNode['parentNodeName']).tag("Type", "Parent Node").field("TCP Latency", tcpLatency).time(timestamp)
 			queriesToSend.append(p)
 	
 	write_api.write(bucket=influxDBBucket, record=queriesToSend)
@@ -516,7 +521,7 @@ def refreshLatencyGraphs():
 		if circuit['stats']['sinceLastQuery']['tcpLatency'] != None:
 			listOfAllLatencies.append(circuit['stats']['sinceLastQuery']['tcpLatency'])
 	currentNetworkLatency = statistics.median(listOfAllLatencies)
-	p = Point('TCP Latency').tag("Type", "Network").field("TCP Latency", currentNetworkLatency)
+	p = Point('TCP Latency').tag("Type", "Network").field("TCP Latency", currentNetworkLatency).time(timestamp)
 	write_api.write(bucket=influxDBBucket, record=p)
 	queriesToSendCount += 1
 	
