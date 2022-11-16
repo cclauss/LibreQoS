@@ -388,6 +388,9 @@ def refreshBandwidthGraphs():
 		token=influxDBtoken,
 		org=influxDBOrg
 	)
+	
+	# Record current timestamp, use for all points added
+	timestamp = time.time_ns()
 	write_api = client.write_api(write_options=SYNCHRONOUS)
 
 	chunkedsubscriberCircuits = list(chunk_list(subscriberCircuits, 200))
@@ -401,9 +404,9 @@ def refreshBandwidthGraphs():
 			if (bitsDownload > 0) and (bitsUpload > 0):
 				percentUtilizationDownload = round((bitsDownload / round(circuit['maxDownload'] * 1000000))*100.0, 1)
 				percentUtilizationUpload = round((bitsUpload / round(circuit['maxUpload'] * 1000000))*100.0, 1)
-				p = Point('Bandwidth').tag("Circuit", circuit['circuitName']).tag("ParentNode", circuit['ParentNode']).tag("Type", "Circuit").field("Download", bitsDownload).field("Upload", bitsUpload)
+				p = Point('Bandwidth').tag("Circuit", circuit['circuitName']).tag("ParentNode", circuit['ParentNode']).tag("Type", "Circuit").field("Download", bitsDownload).field("Upload", bitsUpload).time(timestamp)
 				queriesToSend.append(p)
-				p = Point('Utilization').tag("Circuit", circuit['circuitName']).tag("ParentNode", circuit['ParentNode']).tag("Type", "Circuit").field("Download", percentUtilizationDownload).field("Upload", percentUtilizationUpload)
+				p = Point('Utilization').tag("Circuit", circuit['circuitName']).tag("ParentNode", circuit['ParentNode']).tag("Type", "Circuit").field("Download", percentUtilizationDownload).field("Upload", percentUtilizationUpload).time(timestamp)
 				queriesToSend.append(p)
 
 		write_api.write(bucket=influxDBBucket, record=queriesToSend)
@@ -420,11 +423,11 @@ def refreshBandwidthGraphs():
 		if (bitsDownload > 0) and (bitsUpload > 0):
 			percentUtilizationDownload = round((bitsDownload / round(parentNode['maxDownload'] * 1000000))*100.0, 1)
 			percentUtilizationUpload = round((bitsUpload / round(parentNode['maxUpload'] * 1000000))*100.0, 1)
-			p = Point('Bandwidth').tag("Device", parentNode['parentNodeName']).tag("ParentNode", parentNode['parentNodeName']).tag("Type", "Parent Node").field("Download", bitsDownload).field("Upload", bitsUpload)
+			p = Point('Bandwidth').tag("Device", parentNode['parentNodeName']).tag("ParentNode", parentNode['parentNodeName']).tag("Type", "Parent Node").field("Download", bitsDownload).field("Upload", bitsUpload).time(timestamp)
 			queriesToSend.append(p)
-			p = Point('Utilization').tag("Device", parentNode['parentNodeName']).tag("ParentNode", parentNode['parentNodeName']).tag("Type", "Parent Node").field("Download", percentUtilizationDownload).field("Upload", percentUtilizationUpload)
+			p = Point('Utilization').tag("Device", parentNode['parentNodeName']).tag("ParentNode", parentNode['parentNodeName']).tag("Type", "Parent Node").field("Download", percentUtilizationDownload).field("Upload", percentUtilizationUpload).time(timestamp)
 			queriesToSend.append(p)
-			p = Point('Overload').tag("Device", parentNode['parentNodeName']).tag("ParentNode", parentNode['parentNodeName']).tag("Type", "Parent Node").field("Overload", overloadFactor)
+			p = Point('Overload').tag("Device", parentNode['parentNodeName']).tag("ParentNode", parentNode['parentNodeName']).tag("Type", "Parent Node").field("Overload", overloadFactor).time(timestamp)
 			queriesToSend.append(p)
 
 	write_api.write(bucket=influxDBBucket, record=queriesToSend)
@@ -435,11 +438,11 @@ def refreshBandwidthGraphs():
 		queriesToSend = []
 		listOfTins = ['Bulk', 'BestEffort', 'Video', 'Voice']
 		for tin in listOfTins:
-			p = Point('Tin Drop Percentage').tag("Type", "Tin").tag("Tin", tin).field("Download", tinsStats['sinceLastQuery'][tin]['Download']['dropPercentage']).field("Upload", tinsStats['sinceLastQuery'][tin]['Upload']['dropPercentage'])
+			p = Point('Tin Drop Percentage').tag("Type", "Tin").tag("Tin", tin).field("Download", tinsStats['sinceLastQuery'][tin]['Download']['dropPercentage']).field("Upload", tinsStats['sinceLastQuery'][tin]['Upload']['dropPercentage']).time(timestamp)
 			queriesToSend.append(p)
 			# Check to ensure tin percentage has value (!= None) before graphing. During partial or full reload these will have a value of None.
 			if (tinsStats['sinceLastQuery'][tin]['Download']['percentage'] != None) and (tinsStats['sinceLastQuery'][tin]['Upload']['percentage'] != None):
-				p = Point('Tins Assigned').tag("Type", "Tin").tag("Tin", tin).field("Download", tinsStats['sinceLastQuery'][tin]['Download']['percentage']).field("Upload", tinsStats['sinceLastQuery'][tin]['Upload']['percentage'])
+				p = Point('Tins Assigned').tag("Type", "Tin").tag("Tin", tin).field("Download", tinsStats['sinceLastQuery'][tin]['Download']['percentage']).field("Upload", tinsStats['sinceLastQuery'][tin]['Upload']['percentage']).time(timestamp)
 				queriesToSend.append(p)
 
 		write_api.write(bucket=influxDBBucket, record=queriesToSend)
