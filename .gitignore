@@ -35,6 +35,9 @@ v1.3/longTermStats.json
 v1.3/queuingStructure.json
 v1.3/tinsStats.json
 v1.3/*.bak
+v1.3/lastRun.txt
+v1.3/linux_tc.txt
+v1.3/xdp_iphash_to_cpu_cmdline
 
 # Ignore project folders for some IDEs
 .idea/
